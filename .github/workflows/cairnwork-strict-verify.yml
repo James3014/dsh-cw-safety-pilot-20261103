@@ -1,0 +1,32 @@
+# PILOT TEMPLATE ONLY: install on a PROTECTED branch in a disposable test repository.
+# Do not run candidate code in this pull_request_target workflow.
+name: Cairnwork Strict Verified Candidate
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+concurrency:
+  group: cw-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  cw-verify:
+    name: cw-verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trusted base only
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+      - name: Fetch PR objects without checkout or executing them
+        run: git fetch origin "+refs/pull/${{ github.event.pull_request.number }}/head:refs/remotes/origin/pr-head"
+      - name: Verify independently signed CW evidence
+        uses: cairnwork/verify-action@325ad738a4aa919464ce962c94bc0b099a46bb45
+        with:
+          candidate: ${{ github.event.pull_request.head.sha }}
+          base: ${{ github.event.pull_request.base.sha }}
+          public-key: ${{ vars.CAIRNWORK_PUBLIC_KEY }}
+          policy: ${{ vars.CAIRNWORK_POLICY }}
+          cairnwork-ref: 9b5a7be518048916edece021944c147be030f64d
+          check-base: exact
+          require-when: always
